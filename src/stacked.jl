@@ -1,5 +1,5 @@
 using Lux
-using Lux: False, True
+using Lux: False, True, StaticBool
 
 Lux.@concrete struct StackedCell <: AbstractRecurrentCell
     concatenate <: Lux.StaticBool
