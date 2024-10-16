@@ -3,6 +3,10 @@ uuid = "cc441fe5-8cc4-4841-90c4-26eb7180d202"
 authors = ["Marco Vela <36453977+characat0@users.noreply.github.com> and contributors"]
 version = "1.0.0-DEV"
 
+[deps]
+Lux = "b2108857-7c20-44ae-9111-449ecde12c47"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+
 [compat]
 julia = "1.6.7"
 
