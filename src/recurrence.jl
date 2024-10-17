@@ -1,7 +1,7 @@
 using Lux
 
 Lux.@concrete struct CarryRecurrence{R <: Lux.StaticBool} <: Lux.AbstractLuxWrapperLayer{:cell}
-    cell <: Union{<:Lux.AbstractRecurrentCell, <:Lux.AbstractDebugRecurrentCell}
+    cell <: Union{<:Lux.AbstractRecurrentCell, <:AbstractLuxWrapperLayer, <:Lux.AbstractDebugRecurrentCell}
     ordering <: Lux.AbstractTimeSeriesDataBatchOrdering
     return_sequence::R
 end

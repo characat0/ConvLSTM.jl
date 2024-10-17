@@ -1,24 +1,24 @@
 using Lux
 using Lux: False, True, StaticBool
 
-Lux.@concrete struct StackedCell <: AbstractRecurrentCell
+Lux.@concrete struct StackedCell <: AbstractLuxWrapperLayer{:layers}
     concatenate <: Lux.StaticBool
-    cells::Lux.Chain
+    layers <: NamedTuple
 end
 
 function StackedCell(cells...; concatenate::Lux.BoolType = False())
-    StackedCell(static(concatenate), Chain(cells...))
+    StackedCell(static(concatenate), Chain(cells...).layers)
 end
 
 
 Lux.initialstates(rng::AbstractRNG, stacked::StackedCell) =
-    Lux.initialstates(rng, stacked.cells)
+    Lux.initialstates(rng, stacked.layers)
 
 Lux.initialparameters(rng::AbstractRNG, stacked::StackedCell) =
-    Lux.initialparameters(rng, stacked.cells)
+    Lux.initialparameters(rng, stacked.layers)
 
 (s::StackedCell)(x, ps, st::NamedTuple) =
-    applystacked(s.cells.layers, s.concatenate, x, ps, st)
+    applystacked(s.layers, s.concatenate, x, ps, st)
 
 @generated function applystacked(
     layers::NamedTuple{fields},
@@ -91,7 +91,7 @@ end
 end
 
 
-Lux.Functors.children(x::StackedCell) = Lux.Functors.children(x.cells.layers)
+Lux.Functors.children(x::StackedCell) = Lux.Functors.children(x.layers)
 
 function Base.show(io::IO, stacked::StackedCell)
     print(io, "StackedCell(\n")

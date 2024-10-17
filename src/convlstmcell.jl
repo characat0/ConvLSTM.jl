@@ -9,10 +9,10 @@ const _ConvLSTMInputType = Tuple{<:AbstractArray,Tuple{<:AbstractArray,<:Abstrac
 
 Lux.@concrete struct ConvLSTMCell <: AbstractRecurrentCell
     peephole <: StaticBool
-    Wx::Any
-    Wh::Any
-    init_state::Any
-    init_memory::Any
+    Wx
+    Wh
+    init_state
+    init_memory
 end
 
 function ConvLSTMCell(
