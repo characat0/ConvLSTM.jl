@@ -85,5 +85,6 @@ module ConvLSTM
     end
 
     export SequenceToSequenceConvLSTM
+    export ConvLSTMCell
 
 end

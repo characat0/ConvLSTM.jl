@@ -1,6 +1,9 @@
 using ConvLSTM
 using Test
+using Lux
+using Random
 
 @testset "ConvLSTM.jl" begin
-    # Write your tests here.
+    include("./convlstm_tests.jl")
+
 end
