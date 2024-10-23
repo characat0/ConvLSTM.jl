@@ -1,6 +1,7 @@
 using ConvLSTM
 using Test
 using Lux
+using LuxTestUtils
 using Random
 
 @testset "ConvLSTM.jl" begin

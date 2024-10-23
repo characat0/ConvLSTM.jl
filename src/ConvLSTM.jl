@@ -69,8 +69,9 @@ module ConvLSTM
         activation,
     )
 
-    function (c::SequenceToSequenceConvLSTM{Mode})(x::AbstractArray{T, N}, ps::NamedTuple, st::NamedTuple) where {Mode, T, N}
+    function (c::SequenceToSequenceConvLSTM)(x::AbstractArray{T, N}, ps::NamedTuple, st::NamedTuple) where {T, N}
         rng = Lux.replicate(st.rng)
+        Mode = Lux.known(c.mode)
         if (Mode == :conditional_teacher) && Lux.known(st.training)
             X = selectdim(x, N-1, 1:(size(x, N-1) - c.steps))
         else
