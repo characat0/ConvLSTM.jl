@@ -6,14 +6,21 @@ module ConvLSTM
     include("./encoder.jl")
     include("./decoder.jl")
 
-    struct SequenceToSequenceConvLSTM{Mode, E, D} <: Lux.AbstractLuxContainerLayer{(:encoder, :decoder)}
-        mode::Val{Mode}
+    
+
+    struct ConditionalSequenceToSequenceConvLSTM{E, D} <: Lux.AbstractLuxContainerLayer{(:encoder, :decoder)}
         encoder::E
         decoder::D
         steps::Int
     end
 
-    Lux.initialstates(rng::AbstractRNG, l::SequenceToSequenceConvLSTM) =
+    struct GenerativeSequenceToSequenceConvLSTM{E, D} <: Lux.AbstractLuxContainerLayer{(:encoder, :decoder)}
+        encoder::E
+        decoder::D
+        steps::Int
+    end
+
+    Lux.initialstates(rng::AbstractRNG, l::Union{ConditionalSequenceToSequenceConvLSTM, GenerativeSequenceToSequenceConvLSTM}) =
     (;
         rng = Lux.Utils.sample_replicate(rng),
         encoder=Lux.initialstates(Lux.Utils.sample_replicate(rng), l.encoder),
@@ -32,19 +39,30 @@ module ConvLSTM
         peephole::NTuple{M},
         activation=σ,
     ) where {N, M}
-        if mode ∉ (:conditional_teacher, :conditional, :generative)
-            error("mode should be one of (:conditional_teacher, :conditional, :generative)")
+        if mode ∉ (:conditional, :generative)
+            error("mode should be one of (:conditional, :generative)")
         end
-        return SequenceToSequenceConvLSTM(
-            Val(mode),
-            Encoder(
-                k_x, k_h, in_dims, hidden_dims, use_bias, peephole,
-            ),
-            Decoder(
-                k_x, k_h, in_dims, hidden_dims, use_bias, peephole, activation,
-            ),
-            steps
-        )
+        if mode == :conditional
+            return ConditionalSequenceToSequenceConvLSTM(
+                Encoder(
+                    k_x, k_h, in_dims, hidden_dims, use_bias, peephole,
+                ),
+                Decoder(
+                    k_x, k_h, in_dims, hidden_dims, use_bias, peephole, activation,
+                ),
+                steps
+            )
+        elseif mode == :generative
+            return GenerativeSequenceToSequenceConvLSTM(
+                Encoder(
+                    k_x, k_h, in_dims, hidden_dims, use_bias, peephole,
+                ),
+                Decoder(
+                    k_x, k_h, in_dims, hidden_dims, use_bias, peephole, activation,
+                ),
+                steps
+            )
+        end
     end
 
     SequenceToSequenceConvLSTM(
@@ -69,35 +87,38 @@ module ConvLSTM
         activation,
     )
 
-    function (c::SequenceToSequenceConvLSTM)(x::AbstractArray{T, N}, ps::NamedTuple, st::NamedTuple) where {T, N}
+    function (c::ConditionalSequenceToSequenceConvLSTM)(x::AbstractArray{T, N}, ps::NamedTuple, st::NamedTuple) where {T, N}
         rng = Lux.replicate(st.rng)
-        Mode = Lux.known(c.mode)
-        if (Mode == :conditional_teacher) && Lux.known(st.training)
-            X = selectdim(x, N-1, 1:(size(x, N-1) - c.steps))
-        else
-            X = x
+        if Lux.known(st.training)
+            X_teach = selectdim(x, N-1, (size(x, N-1) - c.steps)+1:size(x, N-1))
+            x = selectdim(x, N-1, 1:(size(x, N-1) - c.steps))
         end
-        (_, carry), st_encoder = c.encoder(X, ps.encoder, st.encoder)
-        if (Mode == :conditional_teacher) || (Mode == :conditional)
-            # Last frame
-            Xi = selectdim(x, N-1, size(X, N-1) + 0)
-        elseif (Mode == :generative)
-            Xi = glorot_uniform(rng, T, size(X)[1:N-2]..., size(X, N))
-        end
+        (_, carry), st_encoder = c.encoder(x, ps.encoder, st.encoder)
+        # Last frame
+        Xi = selectdim(x, N-1, size(x, N-1))
         (output, carry), st_decoder = c.decoder((Xi, carry), ps.decoder, st.decoder)
         out = output
         for i in 1:c.steps-1
-            if (Mode == :conditional_teacher)
-                if Lux.known(st.training)
-                    Xi = selectdim(x, N-1, size(X, N-1) + i)
-                else
-                    Xi = output
-                end
-            elseif Mode == :conditional
+            if Lux.known(st.training)
+                Xi = selectdim(X_teach, N-1, i)
+            else
                 Xi = output
-            elseif Mode == :generative
-                Xi = glorot_uniform(rng, T, size(X)[1:N-2]..., size(X, N))
             end
+            (output, carry), st_decoder = c.decoder((Xi, carry), ps.decoder, st_decoder)
+            out = cat(out, output; dims=Val(N-2))
+        end
+        return out, merge(st, (; rng, encoder=st_encoder, decoder=st_decoder))
+    end
+
+    function (c::GenerativeSequenceToSequenceConvLSTM)(x::AbstractArray{T, N}, ps::NamedTuple, st::NamedTuple) where {T, N}
+        rng = Lux.replicate(st.rng)
+        (_, carry), st_encoder = c.encoder(x, ps.encoder, st.encoder)
+        # Last frame
+        Xi = glorot_uniform(rng, T, size(x)[1:N-2]..., size(x, N))
+        (output, carry), st_decoder = c.decoder((Xi, carry), ps.decoder, st.decoder)
+        out = output
+        for _ in 1:c.steps-1
+            Xi = glorot_uniform(rng, T, size(x)[1:N-2]..., size(x, N))
             (output, carry), st_decoder = c.decoder((Xi, carry), ps.decoder, st_decoder)
             out = cat(out, output; dims=Val(N-2))
         end
