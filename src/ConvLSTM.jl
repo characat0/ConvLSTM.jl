@@ -71,7 +71,7 @@ module ConvLSTM
 
     function (c::SequenceToSequenceConvLSTM{Mode})(x::AbstractArray{T, N}, ps::NamedTuple, st::NamedTuple) where {Mode, T, N}
         rng = Lux.replicate(st.rng)
-        if (Mode == :conditional_teacher) && st.training
+        if (Mode == :conditional_teacher) && Lux.known(st.training)
             X = selectdim(x, N-1, 1:(size(x, N-1) - c.steps))
         else
             X = x
@@ -87,7 +87,7 @@ module ConvLSTM
         out = output
         for i in 1:c.steps-1
             if (Mode == :conditional_teacher)
-                if st.training
+                if Lux.known(st.training)
                     Xi = selectdim(x, N-1, size(X, N-1) + i)
                 else
                     Xi = output
