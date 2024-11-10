@@ -38,6 +38,7 @@ module ConvLSTM
         use_bias::NTuple{M},
         peephole::NTuple{M},
         activation=σ,
+        k_last=1,
     ) where {N, M}
         if mode ∉ (:conditional, :generative)
             error("mode should be one of (:conditional, :generative)")
@@ -48,7 +49,7 @@ module ConvLSTM
                     k_x, k_h, in_dims, hidden_dims, use_bias, peephole,
                 ),
                 Decoder(
-                    k_x, k_h, in_dims, hidden_dims, use_bias, peephole, activation,
+                    k_x, k_h, in_dims, hidden_dims, use_bias, peephole, activation, k_last,
                 ),
                 steps
             )

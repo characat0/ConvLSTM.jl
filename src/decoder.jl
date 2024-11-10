@@ -8,6 +8,7 @@ function Decoder(
     use_bias::NTuple{M},
     peephole::NTuple{M},
     activation=σ,
+    k_out=1,
 ) where {N, M}
     dims = vcat([in_dims], hidden_dims...)
     lstm = StackedCell(
@@ -17,7 +18,7 @@ function Decoder(
         ]...,
         concatenate=True(),
     )
-    conv = Conv(ntuple(Returns(1), N), sum(hidden_dims) => in_dims, activation, use_bias=false)
+    conv = Conv(ntuple(Returns(k_out), N), sum(hidden_dims) => in_dims, activation, use_bias=false)
     return Chain(lstm, Parallel(nothing, conv, NoOpLayer()))
 end
 
