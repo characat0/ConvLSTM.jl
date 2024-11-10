@@ -18,7 +18,7 @@ function Decoder(
         ]...,
         concatenate=True(),
     )
-    conv = Conv(ntuple(Returns(k_out), N), sum(hidden_dims) => in_dims, activation, use_bias=false)
+    conv = Conv(ntuple(Returns(k_out), N), sum(hidden_dims) => in_dims, activation, use_bias=false, pad=SamePad())
     return Chain(lstm, Parallel(nothing, conv, NoOpLayer()))
 end
 
