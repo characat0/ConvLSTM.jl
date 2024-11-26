@@ -8,6 +8,12 @@ module ConvLSTM
 
     
 
+    struct ConditionalTeachingSequenceToSequenceConvLSTM{E, D} <: Lux.AbstractLuxContainerLayer{(:encoder, :decoder)}
+        encoder::E
+        decoder::D
+        steps::Int
+    end
+
     struct ConditionalSequenceToSequenceConvLSTM{E, D} <: Lux.AbstractLuxContainerLayer{(:encoder, :decoder)}
         encoder::E
         decoder::D
@@ -20,7 +26,7 @@ module ConvLSTM
         steps::Int
     end
 
-    Lux.initialstates(rng::AbstractRNG, l::Union{ConditionalSequenceToSequenceConvLSTM, GenerativeSequenceToSequenceConvLSTM}) =
+    Lux.initialstates(rng::AbstractRNG, l::Union{ConditionalSequenceToSequenceConvLSTM, GenerativeSequenceToSequenceConvLSTM, ConditionalTeachingSequenceToSequenceConvLSTM}) =
     (;
         rng = Lux.Utils.sample_replicate(rng),
         encoder=Lux.initialstates(Lux.Utils.sample_replicate(rng), l.encoder),
@@ -40,11 +46,21 @@ module ConvLSTM
         activation=σ,
         k_last=1,
     ) where {N, M}
-        if mode ∉ (:conditional, :generative)
-            error("mode should be one of (:conditional, :generative)")
+        if mode ∉ (:conditional, :generative, :conditional_teaching)
+            error("mode should be one of (:conditional, :generative, :conditional_teaching)")
         end
         if mode == :conditional
             return ConditionalSequenceToSequenceConvLSTM(
+                Encoder(
+                    k_x, k_h, in_dims, hidden_dims, use_bias, peephole,
+                ),
+                Decoder(
+                    k_x, k_h, in_dims, hidden_dims, use_bias, peephole, activation, k_last,
+                ),
+                steps
+            )
+        elseif mode == :conditional_teaching
+            return ConditionalTeachingSequenceToSequenceConvLSTM(
                 Encoder(
                     k_x, k_h, in_dims, hidden_dims, use_bias, peephole,
                 ),
@@ -89,6 +105,21 @@ module ConvLSTM
     )
 
     function (c::ConditionalSequenceToSequenceConvLSTM)(x::AbstractArray{T, N}, ps::NamedTuple, st::NamedTuple) where {T, N}
+        rng = Lux.replicate(st.rng)
+        (_, carry), st_encoder = c.encoder(x, ps.encoder, st.encoder)
+        # Last frame
+        Xi = selectdim(x, N-1, size(x, N-1))
+        (output, carry), st_decoder = c.decoder((Xi, carry), ps.decoder, st.decoder)
+        out = output
+        for i in 1:c.steps-1
+            Xi = output
+            (output, carry), st_decoder = c.decoder((Xi, carry), ps.decoder, st_decoder)
+            out = cat(out, output; dims=Val(N-2))
+        end
+        return out, merge(st, (; rng, encoder=st_encoder, decoder=st_decoder))
+    end
+
+    function (c::ConditionalTeachingSequenceToSequenceConvLSTM)(x::AbstractArray{T, N}, ps::NamedTuple, st::NamedTuple) where {T, N}
         rng = Lux.replicate(st.rng)
         if Lux.known(st.training)
             X_teach = selectdim(x, N-1, (size(x, N-1) - c.steps)+1:size(x, N-1))

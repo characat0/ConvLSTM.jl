@@ -2,7 +2,7 @@
     rng = Xoshiro(42)
     x = rand(rng, Float32, 8, 8, 1, 6, 2)
 
-    @testset "$mode" for mode in (:conditional, :generative)
+    @testset "$mode" for mode in (:conditional, :generative, :conditional_teaching)
         model = SequenceToSequenceConvLSTM((3, 3), (3, 3), 1, (2, 4), 3, mode)
 
         ps, st = Lux.setup(Lux.replicate(rng), model)
@@ -14,7 +14,7 @@
     end
 
     @testset "Conditional - Teaching" begin
-        model = SequenceToSequenceConvLSTM((3, 3), (3, 3), 1, (2, 4), 3, :conditional)
+        model = SequenceToSequenceConvLSTM((3, 3), (3, 3), 1, (2, 4), 3, :conditional_teaching)
         ps, st = Lux.setup(Lux.replicate(rng), model)
         st_test = Lux.testmode(st)
         y_teach, _ = model(x, ps, st)
