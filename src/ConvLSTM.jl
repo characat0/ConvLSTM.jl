@@ -115,11 +115,11 @@ module ConvLSTM
         rng = Lux.replicate(st.rng)
         (_, carry), st_encoder = c.encoder(x, ps.encoder, st.encoder)
         # Last frame
-        Xi = glorot_uniform(rng, T, size(x)[1:N-2]..., size(x, N))
+        Xi = glorot_uniform(rng, T, size(x)[1:N-2]..., size(x, N)) |> Lux.get_device(x)
         (output, carry), st_decoder = c.decoder((Xi, carry), ps.decoder, st.decoder)
         out = output
         for _ in 1:c.steps-1
-            Xi = glorot_uniform(rng, T, size(x)[1:N-2]..., size(x, N))
+            Xi = glorot_uniform(rng, T, size(x)[1:N-2]..., size(x, N)) |> Lux.get_device(x)
             (output, carry), st_decoder = c.decoder((Xi, carry), ps.decoder, st_decoder)
             out = cat(out, output; dims=Val(N-2))
         end
