@@ -25,15 +25,15 @@ end
 
 function (r::CarryRecurrence{True})(x::Union{AbstractVector, NTuple}, ps, st::NamedTuple)
     function recur_op(::Nothing, input)
-        (out, carry), state = apply(r.cell, input, ps, st)
+        (out, carry), state = Lux.apply(r.cell, input, ps, st)
         return [out], carry, state
     end
     function recur_op((outputs, carry, state), input)
-        (out, carry), state = apply(r.cell, (input, carry), ps, state)
+        (out, carry), state = Lux.apply(r.cell, (input, carry), ps, state)
         return vcat(outputs, [out]), carry, state
     end
     results = Lux.private_foldl_init(recur_op, x)
-    return first(results), last(results)
+    return (first(results), results[2]), last(results)
 end
 
 

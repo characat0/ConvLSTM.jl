@@ -10,7 +10,7 @@
         @test size(y) == (8, 8, 3, 2)
 
         __f = (x, ps) -> sum(first(model(x, ps, st)))
-        @test_gradients(__f, x, ps; atol=1.0f-3, rtol=1.0f-3, skip_backends=[AutoReverseDiff(), AutoEnzyme(), AutoTracker()])
+        @test_gradients(__f, x, ps; atol=1.0f-3, rtol=1.0f-3, skip_backends=[AutoReverseDiff(), AutoTracker()])
     end
 
     @testset "Conditional - Teaching" begin
