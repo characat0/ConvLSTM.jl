@@ -45,38 +45,33 @@ module ConvLSTM
         peephole::NTuple{M},
         activation=σ,
         k_last=1,
+        dropout_p=0.0,
     ) where {N, M}
         if mode ∉ (:conditional, :generative, :conditional_teaching)
             error("mode should be one of (:conditional, :generative, :conditional_teaching)")
         end
+        encoder = Encoder(
+            k_x, k_h, in_dims, hidden_dims, use_bias, peephole, dropout_p,
+        )
+        decoder = Decoder(
+            k_x, k_h, in_dims, hidden_dims, use_bias, peephole, activation, k_last, dropout_p
+        )
         if mode == :conditional
             return ConditionalSequenceToSequenceConvLSTM(
-                Encoder(
-                    k_x, k_h, in_dims, hidden_dims, use_bias, peephole,
-                ),
-                Decoder(
-                    k_x, k_h, in_dims, hidden_dims, use_bias, peephole, activation, k_last,
-                ),
+                encoder,
+                decoder,
                 steps
             )
         elseif mode == :conditional_teaching
             return ConditionalTeachingSequenceToSequenceConvLSTM(
-                Encoder(
-                    k_x, k_h, in_dims, hidden_dims, use_bias, peephole,
-                ),
-                Decoder(
-                    k_x, k_h, in_dims, hidden_dims, use_bias, peephole, activation, k_last,
-                ),
+                encoder,
+                decoder,
                 steps
             )
         elseif mode == :generative
             return GenerativeSequenceToSequenceConvLSTM(
-                Encoder(
-                    k_x, k_h, in_dims, hidden_dims, use_bias, peephole,
-                ),
-                Decoder(
-                    k_x, k_h, in_dims, hidden_dims, use_bias, peephole, activation,
-                ),
+                encoder,
+                decoder,
                 steps
             )
         end
@@ -88,10 +83,11 @@ module ConvLSTM
         in_dims, 
         hidden_dims::NTuple{M}, 
         steps,
-        mode::Symbol,
+        mode::Symbol;
         use_bias::Bool = false,
         peephole::Bool = true,
         activation=σ,
+        dropout_p=0.0,
     ) where {N, M} = SequenceToSequenceConvLSTM(
         k_x,
         k_h,
@@ -102,6 +98,8 @@ module ConvLSTM
         ntuple(Returns(use_bias), M),
         ntuple(Returns(peephole), M),
         activation,
+        1,
+        dropout_p,
     )
 
     function (c::ConditionalSequenceToSequenceConvLSTM)(x::AbstractArray{T, N}, ps::NamedTuple, st::NamedTuple) where {T, N}
