@@ -19,7 +19,7 @@
         st_test = Lux.testmode(st)
         y_teach, _ = model(x, ps, st)
         y_not_teach, _ = model(x, ps, st_test)
-        @assert !(y_teach ≈ y_not_teach)
+        @test !(y_teach ≈ y_not_teach)
     end
 
 end
